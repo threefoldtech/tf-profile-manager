@@ -1,3 +1,5 @@
+import { assertInstalled } from './utils/assert';
+
 export type Unsubscribe = () => void;
 export type Listener = (profile: Profile | null) => void;
 export interface ProfileManagerStore {
@@ -17,10 +19,6 @@ export interface Profile {
   secret: string;
 }
 
-export type HasBalance = {
-  balance: { getMyBalance(): Promise<{ free: number; feeFrozen: number }> };
-};
-
 export default class ProfileManager {
   static get isInstalled(): Promise<boolean> {
     return new Promise<boolean>((res) => {
@@ -33,35 +31,38 @@ export default class ProfileManager {
   }
 
   static get snapShot(): Profile | null {
+    assertInstalled();
     let profile: Profile | null = null;
-    const unSubscribe = window.profileManager.subscribe((value) => {
-      profile = value;
-      unSubscribe();
-    });
+    window.profileManager.subscribe((_) => (profile = _))();
     return profile;
   }
 
   static subscribe(listener: Listener): Unsubscribe {
+    assertInstalled();
     return window.profileManager.subscribe(listener);
   }
 
   static destroy(): void {
+    assertInstalled();
     return window.profileManager.destroy();
   }
 
-  static getBalance<T extends HasBalance>(
-    grid: T
+  static async getBalance(
+    grid: any
   ): Promise<{ balance: number; locked: number }> {
-    return grid.balance
-      .getMyBalance()
-      .then(({ free, feeFrozen }) => ({ balance: free, locked: feeFrozen }));
+    assertInstalled();
+    return grid.balance.getMyBalance().then(({ free, feeFrozen }: any) => ({
+      balance: free,
+      locked: feeFrozen,
+    }));
   }
 
-  static subscribeToBalance<T extends HasBalance>(
-    grid: T,
+  static subscribeToBalance(
+    grid: any,
     cb: (balance: { balance: number; locked: number }) => void,
     interval: number = 60 * 1000
   ): Unsubscribe {
+    assertInstalled();
     let _done = false;
     let _clearTimeOut: number;
 
